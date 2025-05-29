@@ -10,6 +10,7 @@ from layouts import login, dashboard_worker, dashboard_admin
 # components 폴더에서 sidebar 모듈 임포트
 from components.sidebar import side_layout
 import os
+from flask import Flask
 
 # 예시 사용자 정보
 USERS = {
