@@ -6,7 +6,7 @@ from dash import html, dcc, Input, Output, State, ctx, no_update
 from dash.exceptions import PreventUpdate
 
 # layouts 폴더에서 login, dashboard_worker, dashboard_admin 모듈 임포트
-from layouts import login, dashboard_worker, dashboard_admin
+from layouts import login, dashboard_worker, dashboard_admin, hiiii
 # components 폴더에서 sidebar 모듈 임포트
 from components.sidebar import side_layout
 import os
@@ -136,7 +136,7 @@ def unified_layout(role, pathname):
             if pathname == "/worker":
                 page_layout = dashboard_worker.wo_layout()
             elif pathname == "/worker/analytics":
-                page_layout = dashboard_worker.analytics_layout()
+                page_layout = hiiii.analytics_layout()
             else:
                 page_layout = dashboard_worker.wo_layout()
         elif role == "admin":
