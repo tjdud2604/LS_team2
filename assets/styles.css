@@ -1,0 +1,204 @@
+/* 전체 배경 및 기본 폰트 */
+body {
+    background: radial-gradient(circle at 20% 30%, #dbe9f4, #e0d3f5, #c9d6ff);
+    font-family: 'Noto Sans KR', sans-serif;
+    margin: 0;
+    padding: 20px;
+    background-attachment: fixed;
+}
+
+.glass-card::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(145deg, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0) 100%);
+    pointer-events: none;
+    z-index: 1;
+}
+
+/* 글래스 카드 스타일 */
+/* .glass-card, .card {
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 15px;
+    box-shadow:
+        0 8px 32px 0 rgba(31, 38, 135, 0.37),
+        0 0 15px rgba(255, 255, 255, 0.2),
+        inset 0 0 10px rgba(255, 255, 255, 0.2),
+        inset 0 0 2px rgba(255, 255, 255, 0.4);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    padding: 1.5rem;
+    margin-bottom: 20px;
+    color: #000000;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+} */
+
+.glass-card, .card {
+    position: relative;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 20px;
+    box-shadow:
+        0 8px 32px rgba(31, 38, 135, 0.2),
+        0 0 20px rgba(255, 255, 255, 0.1),
+        inset 0 0 12px rgba(255, 255, 255, 0.06);
+    backdrop-filter: blur(25px) saturate(180%);
+    -webkit-backdrop-filter: blur(25px) saturate(180%);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    padding: 2rem;
+    margin-bottom: 24px;
+    color: rgba(0, 0, 0, 0.85);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+
+.glass-card::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, rgba(255,255,255,0.05), rgba(255,255,255,0));
+    pointer-events: none;
+    border-radius: inherit;
+}
+
+
+/* 카드 hover 효과 */
+.glass-card:hover, .card:hover {
+    transform: translateY(-5px);
+    box-shadow:
+        0 12px 40px rgba(31, 38, 135, 0.6),
+        0 0 25px rgba(255, 255, 255, 0.3);
+}
+
+/* 카드 내 텍스트 */
+.glass-card p, .card p,
+h2, h3 {
+    color: rgba(0, 0, 0, 0.85);
+    text-shadow: 0 0 1px rgba(255,255,255,0.4);
+}
+
+/* 제목 스타일 */
+h2, h3 {
+    color: #000000;
+}
+
+/* 로그아웃 버튼 위치 고정 */
+#logout-button {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    z-index: 1000;
+}
+
+/* 센서 테이블 스크롤 처리 */
+#live-table {
+    max-height: 60vh;
+    overflow-y: auto;
+}
+
+/* 코드 박스 스타일 */
+pre, code {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: #000000;
+    font-family: 'Fira Code', Consolas, monospace;
+    font-size: 14px;
+    padding: 10px;
+    border-radius: 8px;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+}
+
+/* 대시보드 카드 정렬 */
+.dashboard {
+    display: flex;
+    flex-direction: row;
+    padding: 30px;
+    gap: 20px;
+}
+
+/* 카드 그룹 */
+.card-container {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+#page-content {
+    margin-left: 250px;  /* 사이드바 너비만큼 비워줌 */
+    padding: 30px;       /* 안쪽 여백 */
+}
+
+/* 사이드바 스타일 */
+.sidebar {
+    width: 220px;
+    height: 100vh;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.2);
+    padding: 20px;
+    border-radius: 0 20px 20px 0;
+    position: fixed;
+    top: 0;
+    left: 0;
+    display: flex;
+    flex-direction: column;
+    color: #fff;
+}
+
+#sidebar-container {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 250px;
+    background-color: #f8f9fa57;
+    padding: 10px;
+}
+
+
+.sidebar a {
+    margin: 10px 0;
+    text-decoration: none;
+    color: #000000;
+    font-weight: bold;
+    transition: color 0.3s ease;
+}
+
+.sidebar a:hover {
+    color: #ffd700;
+}
+
+/* 본문 영역 */
+.main-content {
+    margin-left: 240px;
+    flex: 1;
+}
+
+body {
+    background: linear-gradient(135deg, #d0e3f0, #e2d3f5);
+    font-family: 'Noto Sans KR', sans-serif;
+}
+
+.shiny-text {
+    background: linear-gradient(90deg, #7d4dff, #582179, #ffffff);
+    background-size: 200%;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    /* animation: shine 2s linear infinite; */
+    /* animation: shine 3s ease-in-out infinite; */
+    animation: soft-shine 4s ease-in-out infinite;
+}
+
+@keyframes shine {
+    0% {
+        background-position: -200% 0;
+    }
+    100% {
+        background-position: 200% 0;
+    }
+}
