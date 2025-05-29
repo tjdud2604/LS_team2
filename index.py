@@ -6,7 +6,7 @@ from dash import html, dcc, Input, Output, State, ctx, no_update
 from dash.exceptions import PreventUpdate
 
 # layouts 폴더에서 login, dashboard_worker, dashboard_admin 모듈 임포트
-from layouts import login, dashboard_worker, dashboard_admin, hiiii
+from layouts import login, dashboard_worker, dashboard_admin
 # components 폴더에서 sidebar 모듈 임포트
 from components.sidebar import side_layout
 import os
