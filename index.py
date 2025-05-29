@@ -151,8 +151,8 @@ def unified_layout(role, pathname):
 # 대시보드 워커 콜백 등록 (layouts/dashboard_worker.py에 정의된 콜백)
 dashboard_worker.register_callbacks(app)
 
-if __name__ == "__main__":
-    app.run(debug=True, port=8050)
+# if __name__ == "__main__":
+#     app.run(debug=True, port=8050)
 
 import os
 
