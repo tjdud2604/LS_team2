@@ -136,7 +136,7 @@ def unified_layout(role, pathname):
             if pathname == "/worker":
                 page_layout = dashboard_worker.wo_layout()
             elif pathname == "/worker/analytics":
-                page_layout = hiiii.analytics_layout()
+                page_layout = dashboard_worker.analytics_layout()
             else:
                 page_layout = dashboard_worker.wo_layout()
         elif role == "admin":
