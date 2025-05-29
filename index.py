@@ -12,15 +12,16 @@ from components.sidebar import side_layout
 import os
 from flask import Flask
 
+
+app = dash.Dash(__name__, suppress_callback_exceptions=True, external_stylesheets=[dbc.themes.BOOTSTRAP])
+print(os.environ.get("PORT"))
+server = app.server
+
 # 예시 사용자 정보
 USERS = {
     "1": {"password": "1", "role": "admin"},
     "2": {"password": "2", "role": "worker"}
 }
-
-app = dash.Dash(__name__, suppress_callback_exceptions=True, external_stylesheets=[dbc.themes.BOOTSTRAP])
-print(os.environ.get("PORT"))
-server = app.server
 
 # 애플리케이션의 메인 레이아웃을 정의하는 함수
 def serve_layout():
