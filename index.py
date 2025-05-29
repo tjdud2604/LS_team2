@@ -9,6 +9,7 @@ from dash.exceptions import PreventUpdate
 from layouts import login, dashboard_worker, dashboard_admin
 # components 폴더에서 sidebar 모듈 임포트
 from components.sidebar import side_layout
+import os
 
 # 예시 사용자 정보
 USERS = {
@@ -17,6 +18,7 @@ USERS = {
 }
 
 app = dash.Dash(__name__, suppress_callback_exceptions=True, external_stylesheets=[dbc.themes.BOOTSTRAP])
+print(os.environ.get("PORT"))
 server = app.server
 
 # 애플리케이션의 메인 레이아웃을 정의하는 함수
@@ -154,8 +156,8 @@ dashboard_worker.register_callbacks(app)
 # if __name__ == "__main__":
 #     app.run(debug=True, port=8050)
 
-import os
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 8050))  # 환경변수에서 포트 읽기
+    host = os.environ.get("HOST")
+    port = int(os.environ.get("PORT", 10000))  # 환경변수에서 포트 읽기
     app.run_server(host="0.0.0.0", port=port, debug=True)
