@@ -165,11 +165,11 @@ def unified_layout(role, pathname):
 dashboard_worker.register_callbacks(app)
 dashboard_worker.register_monitoring_callbacks(app)
 
-if __name__ == "__main__":
-    app.run(debug=True, port=8050)
-
-# import os
-
 # if __name__ == "__main__":
-#     port = int(os.environ.get("PORT", 8050))  # 환경변수에서 포트 읽기
-#     app.run_server(host="0.0.0.0", port=port, debug=True)
+#     app.run(debug=True, port=8050)
+
+import os
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 8050))  # 환경변수에서 포트 읽기
+    app.run_server(host="0.0.0.0", port=port, debug=True)
