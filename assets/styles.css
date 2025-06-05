@@ -202,3 +202,12 @@ body {
         background-position: 200% 0;
     }
 }
+
+.warning-text {
+    animation: fadeAlert 1s ease-in-out infinite alternate;
+}
+
+@keyframes fadeAlert {
+    from { opacity: 1; }
+    to { opacity: 0.6; }
+}
