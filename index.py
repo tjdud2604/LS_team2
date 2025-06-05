@@ -166,7 +166,7 @@ dashboard_worker.register_callbacks(app)
 dashboard_worker.register_monitoring_callbacks(app)
 
 if __name__ == "__main__":
-    app.run(debug=True, port=8050)
+    app.run(host="0.0.0.0", debug=True, port=8050)
 
 # import os
 
