@@ -2,44 +2,59 @@
 
 import dash
 import dash_bootstrap_components as dbc
-from dash import html, dcc, Input, Output, State, ctx, no_update, callback_context, ALL
+from dash import html, dcc, Input, Output, State, ctx, no_update
 from dash.exceptions import PreventUpdate
-from datetime import datetime
+import json
 
 # layouts 폴더에서 login, dashboard_worker, dashboard_admin 모듈 임포트
 from layouts import login, dashboard_worker, dashboard_admin
 # components 폴더에서 sidebar 모듈 임포트
 from components.sidebar import side_layout
-import os
-from flask import Flask
-
-
-app = dash.Dash(__name__, suppress_callback_exceptions=True, external_stylesheets=[dbc.themes.BOOTSTRAP])
-print(os.environ.get("PORT"))
-server = app.server
-
+from layouts.dashboard_worker import preload_initial_data
+from feature_engineer import FeatureEngineer
+import pandas as pd
+from layouts.dashboard_admin import compute_valid_ranges, DEFAULT_THRESHOLDS_BY_MOLD
+pd.set_option('future.no_silent_downcasting', True)
 # 예시 사용자 정보
 USERS = {
     "1": {"password": "1", "role": "admin"},
     "2": {"password": "2", "role": "worker"}
 }
 
+app = dash.Dash(__name__, suppress_callback_exceptions=True, external_stylesheets=[dbc.themes.BOOTSTRAP])
+app.config.suppress_callback_exceptions = True
+server = app.server
+
 # 애플리케이션의 메인 레이아웃을 정의하는 함수
 def serve_layout():
+    # 초기 데이터 사전 로딩 (train.csv에서)
+    initial_counter_data, initial_fault_history, initial_monitoring_data = preload_initial_data()
+    train_df = pd.read_csv("./data/train.csv", low_memory=False)
+    initial_valid_ranges = compute_valid_ranges(train_df, DEFAULT_THRESHOLDS_BY_MOLD)
     return html.Div([
-        dcc.Location(id="url", refresh=False), # URL 변경 감지
-        dcc.Store(id="user-role"), # 사용자 역할 저장
-        dcc.Store(id="username-store"), # 사용자 이름을 임시 저장할 dcc.Store 추가
-        dcc.Store(id="password-store"), # 비밀번호를 임시 저장할 dcc.Store 추가
+        dcc.Location(id="url", refresh=False),
         
-        html.Div(id="sidebar-container"), # 사이드바 컨테이너
-        html.Button("Logout", id="logout-button", style={"display": "none"}), # 로그아웃 버튼 (초기 숨김)
-        html.Button(id="login-trigger-button", style={"display": "none"}), # 로그인 로직을 트리거할 숨겨진 버튼 (이전 login-button 대체)
-        html.Div(id="page-content", children=login.layout()), # 페이지 내용 컨테이너 (초기 로그인 페이지)
+        # ✅ 초기 데이터로 store 설정
+        dcc.Store(id='fault-history-store', data=initial_fault_history),
+        dcc.Store(id='counter-store', data=initial_counter_data),
+        dcc.Store(id='realtime-monitoring-store', data=initial_monitoring_data),
+        dcc.Store(id="valid-ranges-store", data=initial_valid_ranges),
+        
+        dcc.Interval(id="interval", interval=2_000, n_intervals=0),
+        dcc.Store(id="user-role"),
+        dcc.Store(id="username-store"),
+        dcc.Store(id="password-store"),
+        
+
+        html.Div(id="sidebar-container"),
+        html.Button("Logout", id="logout-button", style={"display": "none"}),
+        html.Button(id="login-trigger-button", style={"display": "none"}),
+
+        html.Div(id="page-content", children=login.layout()),
         html.Div(id="login-message", style={"color": "red", "textAlign": "center", "marginTop": "10px"})
     ])
 
-app.layout = serve_layout()
+app.layout = serve_layout
 
 # --- 로그인 입력 값 dcc.Store에 저장 ---
 # submit-login-button 클릭 시, input-username과 input-password의 값을 dcc.Store에 저장
@@ -144,143 +159,21 @@ def unified_layout(role, pathname):
         elif role == "admin":
             if pathname == "/admin":
                 page_layout = dashboard_admin.ad_layout()
-            elif pathname == "/admin/model":
-                page_layout = dashboard_admin.model_layout()
-            elif pathname == "/admin/final":
-                page_layout = dashboard_admin.final_layout()
             else:
                 page_layout = dashboard_admin.ad_layout()
 
     return sidebar_style, sidebar_children, logout_style, page_layout
 
-
-
-# app.py
-
-# ... (기존 register_callbacks 함수 내부의 update_dashboard_and_delete 콜백 생략) ...
-
-
-    # --- 사용자 코멘트 업데이트 콜백 ---
-@app.callback(
-    Output('user-comments-display', 'children'),
-    Output('new-comment-input', 'value'),
-    Output('handover-data-store', 'data'),
-    Input('submit-comment-button', 'n_clicks'),
-    Input('handover-data-store', 'data'), # 새로고침 시 기존 코멘트 로드용
-    State('new-comment-input', 'value'),
-    prevent_initial_call=False # 초기 로딩 시에도 댓글 표시
-)
-def update_user_comments(n_clicks, stored_data, new_comment):
-        # 콜백이 실행될 때 stored_data에서 최신 코멘트를 가져옴
-    comments = stored_data.get('comments', [])
-        
-    ctx = callback_context
-    trigger_id = ctx.triggered[0]['prop_id'].split('.')[0] if ctx.triggered else 'initial_load'
-
-    if trigger_id == 'submit-comment-button' and n_clicks > 0 and new_comment:
-        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        comment_entry = f"[{timestamp}] 사용자: {new_comment}"
-        comments.append(comment_entry)
-            
-        # dcc.Store 데이터 업데이트
-        stored_data['comments'] = comments
-            
-        # 화면에 표시될 코멘트 HTML 생성
-        comment_elements = [html.P(comment, style={"marginBottom": "5px"}) for comment in comments]
-        return comment_elements, "", stored_data # 입력창 초기화, 스토어 업데이트
-        
-    elif trigger_id == 'handover-data-store' or trigger_id == 'initial_load':
-        # 페이지 로드 또는 스토어 업데이트 시 기존 코멘트 표시
-        comment_elements = [html.P(comment, style={"marginBottom": "5px"}) for comment in comments]
-        return comment_elements, no_update, no_update # 입력창 유지, 스토어 유지
-        
-    return no_update, no_update, no_update
-
-
-    # --- 체크리스트 상태 업데이트 콜백 ---
-@app.callback(
-    Output('handover-data-store', 'data', allow_duplicate=True), # allow_duplicate=True 필요
-    Input({'type': 'checklist-item', 'index': ALL}, 'value'), # 동적으로 생성된 체크리스트 아이템
-    State('handover-data-store', 'data'),
-    prevent_initial_call=True # 초기 로딩 시에는 실행되지 않도록
-)
-
-def update_checklist_status(checklist_values, stored_data):
-        # checklist_values는 각 체크리스트 항목의 현재 값(체크된 항목) 리스트의 리스트입니다.
-        # 예: [[], ['task_2'], [], ['task_4']]
-        
-    checklist_status = stored_data.get('checklist_status', {})
-    
-    # 어떤 체크리스트 항목이 변경되었는지 정확히 파악하기 위해 ctx.triggered 사용
-    ctx = callback_context
-    if not ctx.triggered:
-        raise PreventUpdate
-            
-    for input_item in ctx.triggered:
-        prop_id = input_item['prop_id'] # 예: '{"index":0,"type":"checklist-item"}.value'
-        new_value = input_item['value'] # 예: ['task_1'] 또는 []
-            
-        # Dynamic ID에서 index와 type 추출
-        if 'checklist-item' in prop_id:
-            try:
-                # '{"index":0,"type":"checklist-item"}.value' 에서 index 추출
-                idx_str = prop_id.split('"index":')[1].split(',')[0]
-                index = int(idx_str)
-                
-                # 해당 체크리스트 항목의 ID (예: 'task_1') 가져오기
-                # options[0]['value']를 사용하는 이유는, 각 checklist-item은 단일 옵션만 가지기 때문입니다.
-                # 만약 여러 옵션을 가질 수 있다면, 더 복잡한 로직이 필요합니다.
-                task_id = f'task_{index + 1}' # 예시로 task_0, task_1 대신 task_1, task_2로 매핑
-                    
-                # 체크 여부 업데이트 (체크되면 True, 아니면 False)
-                checklist_status[task_id] = bool(new_value)
-            except Exception as e:
-                print(f"Error parsing checklist item ID: {e}")
-
-    stored_data['checklist_status'] = checklist_status
-    return stored_data
-
-    # --- 체크리스트 초기 로딩 시 상태 복원 콜백 ---
-    # 이 콜백은 페이지가 로드될 때 stored_data에 저장된 checklist_status를 바탕으로
-    # 체크리스트 항목들의 'value'를 설정하여 이전에 체크된 상태를 복원합니다.
-@app.callback(
-    Output({'type': 'checklist-item', 'index': ALL}, 'value'),
-    Input('handover-data-store', 'data'),
-    State({'type': 'checklist-item', 'index': ALL}, 'id'), # 각 체크리스트 아이템의 id를 가져옴
-    prevent_initial_call=False
-)
-def restore_checklist_status(stored_data, checklist_ids):
-    if not stored_data or 'checklist_status' not in stored_data:
-        raise PreventUpdate
-            
-    checklist_status = stored_data['checklist_status']
-    output_values = []
-
-    # checklist_ids는 다음과 같은 형태의 리스트:
-    # [{'index': 0, 'type': 'checklist-item'}, {'index': 1, 'type': 'checklist-item'}, ...]
-    
-    for item_id_dict in checklist_ids:
-        index = item_id_dict['index']
-        task_id = f'task_{index + 1}' # task_1, task_2 등으로 매핑
-        
-        # 저장된 상태에 따라 체크 여부 설정
-        if checklist_status.get(task_id, False):
-            output_values.append([task_id]) # 체크된 상태는 리스트에 value를 담아서 반환
-        else:
-            output_values.append([]) # 체크되지 않은 상태는 빈 리스트 반환
-        
-    return output_values
-
-# ... (나머지 코드 생략) ...
-
-
 # 대시보드 워커 콜백 등록 (layouts/dashboard_worker.py에 정의된 콜백)
 dashboard_worker.register_callbacks(app)
+dashboard_worker.register_monitoring_callbacks(app)
+dashboard_admin.register_callbacks(app)
 
 if __name__ == "__main__":
     app.run(debug=True, port=8050)
 
+# import os
 
 # if __name__ == "__main__":
 #     port = int(os.environ.get("PORT", 8050))  # 환경변수에서 포트 읽기
-#     app.run_server(host="0.0.0.0", port=port)
+#     app.run_server(host="0.0.0.0", port=port, debug=True)

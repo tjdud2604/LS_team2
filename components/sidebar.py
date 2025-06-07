@@ -20,6 +20,6 @@ def side_layout(role):
         ]
 
     return html.Div([
-        html.H2("📋 Menu", className="sidebar-title"),
+        html.H2("Menu", className="sidebar-title"),
         *links,
     ], className="sidebar")
