@@ -10,5 +10,6 @@ def layout():
         html.Div(id="result-prob-card", style={"display": "none"}),
         html.Div(id="fault-record", style={"display": "none"}),
         html.Div(id="sensor-card-container", style={"display": "none"}),
-        dcc.Graph(id="prob-graph", style={"display": "none"})
+        dcc.Graph(id="prob-graph", style={"display": "none"}),
+        dcc.Dropdown(id="time-range-selector",style={"display": "none"})
     ], style={"marginTop": "100px", "maxWidth": "400px"})
