@@ -23,7 +23,7 @@ def layout():
             dcc.Dropdown(id="time-range-selector", style={"display": "none"})
         ],
         className="glass-card",  # 👉 CSS로 꾸미기 용이하게 className 부여
-        style={"maxWidth": "400px", "width": "100%", "marginTop" : "100px"}),
+        style={"maxWidth": "400px", "width": "100%", "marginTop" : "200px"}),
 
         # 로그인 전체 배경 레이아웃 (중앙 고정, 투명)
         style={
