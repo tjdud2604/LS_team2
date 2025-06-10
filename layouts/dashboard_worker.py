@@ -20,10 +20,8 @@ pd.set_option('future.no_silent_downcasting', True)
 
 DATA_PATH = "./data/answer.csv"
 
-sensor_features = [
-    "upper_mold_temp1", "upper_mold_temp2", "lower_mold_temp1", "lower_mold_temp2",
-    "cast_pressure", "sleeve_temperature", "low_section_speed", "high_section_speed"
-]
+sensor_features = ['upper_mold_temp1','upper_mold_temp2','lower_mold_temp1','lower_mold_temp2',
+           'cast_pressure','sleeve_temperature','low_section_speed','Coolant_temperature']
 
 SPECIALIZED_MODELS = {
     8412: "./data/model_8412.pkl",
@@ -32,7 +30,7 @@ SPECIALIZED_MODELS = {
     8722: "./data/model_8722.pkl",
     8917: "./data/model_8917.pkl"
 }
-DEFAULT_MODEL_PATH = "./data/model_all.pkl"
+DEFAULT_MODEL_PATH = "./data/model_8917.pkl"
 
 MODEL_CACHE = {}
 FAILURE_CAUSE_STATS = {}
@@ -134,65 +132,62 @@ def predict_one_row(row):
 
 df_all = pd.read_csv(DATA_PATH, low_memory=False)
 
-TRAIN_PATH = "./data/sampled_train.csv" 
+PRECOMPUTED_PATH = "./data/precomputed_records.csv"
 
 def preload_initial_data(n=1000):
-    train_df = pd.read_csv(TRAIN_PATH, low_memory=False)
-    train_df = train_df.loc[:, ~train_df.columns.str.contains('^Unnamed')]
-    X = train_df.tail(n)
+    df = pd.read_csv(PRECOMPUTED_PATH)
+    df = df.dropna(subset=["mold_code", "pred"])
+    df = df.tail(n)  # 최신 n개
 
-    counter_data = {'total_count': 0, 'fail_count': 0, 'timestamps': [], 'failure_rates': []}
+    counter_data = {
+        'total_count': 0,
+        'fail_count': 0,
+        'timestamps': [],
+        'failure_rates': []
+    }
     production_monitoring = {
         'timestamps': [],
         'mold_codes': [],
         'sensor_data': []
     }
     monitoring_data = []
-
-    # ✅ 통합된 몰드 통계 및 SHAP 요약
     mold_stats = {}
 
     now = datetime.now()
     base_time = now - timedelta(seconds=10 * n)
-    
-    for i, row in enumerate(X.iterrows()):
-        row_data = row[1]
-        pred, prob, shap_summary = predict_with_shap(row_data)
-        mold_code = int(row_data['mold_code'])
 
-        # ✅ 몰드코드 초기화 및 생산 수 증가
-        if mold_code not in mold_stats:
-            mold_stats[mold_code] = {
-                'total': 0,
-                'fail': 0,
-                'shap_summary': {}
-            }
-        mold_stats[mold_code]['total'] += 1
+    for i, (_, row) in enumerate(df.iterrows()):
+        mold_code = str(int(row["mold_code"]))
+        pred = int(row["pred"])
+        shap_feature = row.get("shap_top_feature", "")
 
-        counter_data['total_count'] += 1
+        # 시간 생성
         timestamp = (base_time + timedelta(seconds=10 * i)).strftime("%Y-%m-%d %H:%M:%S")
-
+        counter_data['total_count'] += 1
         if pred == 1:
             counter_data['fail_count'] += 1
-            mold_stats[mold_code]['fail'] += 1
-
-            # ✅ SHAP 피처별 등장 횟수 누적
-            for feature in shap_summary:
-                shap_counter = mold_stats[mold_code]['shap_summary']
-                shap_counter[feature] = shap_counter.get(feature, 0) + 1
-
         failure_rate = counter_data['fail_count'] / counter_data['total_count']
         counter_data['timestamps'].append(timestamp)
         counter_data['failure_rates'].append(failure_rate)
 
-        sensor_data = row_data[sensor_features].to_dict()
+        # 센서 데이터
+        sensor_data = {f: row.get(f, np.nan) for f in sensor_features}
         monitoring_data.append(sensor_data)
 
         production_monitoring['timestamps'].append(timestamp)
         production_monitoring['mold_codes'].append(mold_code)
         production_monitoring['sensor_data'].append(sensor_data)
 
-    # ✅ 최종 통합된 데이터 반환
+        # 몰드 통계
+        if mold_code not in mold_stats:
+            mold_stats[mold_code] = {'total': 0, 'fail': 0, 'shap_summary': {}}
+        mold_stats[mold_code]['total'] += 1
+        if pred == 1 and shap_feature:
+            shap_summary = mold_stats[mold_code]['shap_summary']
+            shap_summary[shap_feature] = shap_summary.get(shap_feature, 0) + 1
+            mold_stats[mold_code]['fail'] += 1
+
+    # ⚠️ fault_history는 빈 리스트로 초기화
     return counter_data, [], monitoring_data, production_monitoring, mold_stats
 
 #################################
