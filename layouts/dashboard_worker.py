@@ -180,8 +180,11 @@ def preload_initial_data(n=1000):
 
         # 몰드 통계
         if mold_code not in mold_stats:
-            mold_stats[mold_code] = {'total': 0, 'fail': 0, 'shap_summary': {}}
+            mold_stats[mold_code] = {'total': 0, 'fail': 0, 'shap_summary': {}, 'timestamps': []}
+
         mold_stats[mold_code]['total'] += 1
+        mold_stats[mold_code]['timestamps'].append(timestamp)
+
         if pred == 1 and shap_feature:
             shap_summary = mold_stats[mold_code]['shap_summary']
             shap_summary[shap_feature] = shap_summary.get(shap_feature, 0) + 1
@@ -205,17 +208,30 @@ def get_card_color(feature, value, valid_ranges):
 
 def wo_layout():
     return html.Div(children=[
+
+        html.H4(
+            "공정 실시간 모니터링",
+            className="glass-card",
+            style={
+                "textAlign": "center",
+                "marginBottom": "20px",
+                "fontWeight": "bold"
+            }
+        ),
+
         html.Div(id="sensor-card-container", style={"display": "grid", "gap": "10px", "gridTemplateColumns": "repeat(4, 1fr)"}),
         dcc.Dropdown(
             id="time-range-selector",
             options=[
                 {"label": "1분", "value": "1min"},
-                {"label": "15분", "value": "15min"},
                 {"label": "30분", "value": "30min"},
-                {"label": "1시간", "value": "1hour"}
+                {"label": "1시간", "value": "1hour"},
+                {"label": "2시간", "value": "2hour"},
+                {"label": "4시간", "value": "4hour"},
+                {"label": "24시간", "value": "24hour"}
             ],
             value="1min",
-            style={"width": "150px", "marginBottom": "10px"}
+            style={"width": "150px", "marginBottom": "10px", "marginTop" : "10px"}
         ),
         dcc.Graph(
             id="prob-graph",
@@ -224,19 +240,7 @@ def wo_layout():
         ),
 
         html.Div(style={"display": "flex", "gap": "20px"}, children=[
-            html.Div(className='glass-card', style={
-                    "padding": "20px",
-                    "borderRadius": "10px",
-                    "boxShadow": "0 4px 8px rgba(0, 0, 0, 0.1)",
-                    "color": "#333333",
-                    "display": "flex",
-                    "flexDirection": "column",
-                    "gap": "20px",
-                    "flex": "1"
-                }, children=[
-                    html.Div(id="fault-result"),
-                    html.Div(id="result-prob-card"),
-                ]),
+            html.Div(id="result-prob-card", style={"flex": "1"}),
             html.Div(className='glass-card',
                      id="fault-record", 
                      style={
@@ -259,30 +263,105 @@ def wo_layout():
 
 mold_codes = list(SPECIALIZED_MODELS.keys())
 
+SENSOR_KO_NAME_FOR_ANALTICS = {
+    'cast__pressure': '주조 압력',
+    'lower__mold_temp1': '하부 금형 온도1',
+    'lower__mold_temp2': '하부 금형 온도2',
+    'upper__mold_temp1': '상부 금형 온도1',
+    'upper__mold_temp2': '상부 금형 온도2',
+    'facility__operation_cycleTime': '설비 작동 사이클 시간',
+    'sleeve__temperature': '슬리브 온도',
+    'low__section_speed': '저속 구간 속도',
+    'high__section_speed': '고속 구간 속도',
+    'Coolant__temperature': '냉각수 온도',
+    'cast__pressure_is_low': '주조 압력',
+    'biscuit__thickness': '비스켓 두께',
+    'high__section_speed_is_abnormal': '고속 구간 속도',
+    'sleeve__temperature_is_outlier': '슬리브 온도',
+    'num__sleeve_temperature': '슬리브 온도',
+    'num__upper_mold_temp2': '상부 금형 온도2',
+    'num__low_section_speed': '저속 구간 속도',
+    'num__cast_pressure': '주조 압력',
+    'num__Coolant_temperature': '냉각수 온도',
+    'num__upper_mold_temp1': '상부 금형 온도1',
+    'cast_pressure': '주조 압력',
+    'lower_mold_temp1': '하부 금형 온도1',
+    'lower_mold_temp2': '하부 금형 온도2',
+    'upper_mold_temp1': '상부 금형 온도1',
+    'upper_mold_temp2': '상부 금형 온도2',
+    'sleeve_temperature': '슬리브 온도',
+    'low_section_speed': '저속 구간 속도',
+    'high_section_speed': '고속 구간 속도',
+    'Coolant_temperature': '냉각수 온도',
+}
+
 def analytics_layout():
     return html.Div([
-        html.H4("몰드코드별 시간대별 생산 이력", className="glass-card"),
-        dcc.Graph(id='mold-time-graph', className="glass-card"),
-
-        dcc.Dropdown(
-            id='mold-code-selector',
-            options=[{'label': str(code), 'value': str(code)} for code in mold_codes],
-            value=str(mold_codes[0]),
-            style={'width': '300px', 'marginBottom': '20px'}
+        html.H4(
+            "공정 누적 모니터링",
+            className="glass-card",
+            style={
+                "textAlign": "center",
+                "marginBottom": "20px",
+                "fontWeight": "bold"
+            }
         ),
 
-        dcc.Graph(id='mold-failure-bar'),
-        dcc.Graph(id='shap-pie-chart'),
-
         dcc.Dropdown(
-            id='selected-variable',
-            options=[{'label': var, 'value': var} for var in sensor_features],
-            value=[sensor_features[0]],
-            multi=True,
-            style={'width': '300px'}
+            id='mold-time-range',
+            options=[
+                {'label': '1분 전', 'value': '1min'},
+                {'label': '30분 전', 'value': '30min'},
+                {'label': '1시간 전', 'value': '1hour'},
+                {'label': '2시간 전', 'value': '2hour'},
+                {'label': '4시간 전', 'value': '4hour'},
+                {'label': '24시간 전', 'value': '24hour'},
+            ],
+            value='24hour',
+            style={'width': '150px', 'marginBottom': '10px'}
         ),
 
-        dcc.Graph(id="monitoring-graph", className="glass-card"),
+        # ✅ 아래 묶음을 하나의 glass-card로 감쌈
+        html.Div(className='glass-card', style={'padding': '20px', 'marginBottom': '20px'}, children=[
+            dcc.Graph(id='mold-time-graph'),
+
+            dcc.Dropdown(
+                id='mold-code-selector',
+                options=[{'label': str(code), 'value': str(code)} for code in mold_codes],
+                value=str(mold_codes[3]),
+                style={'width': '300px', 'marginBottom': '20px'}
+            ),
+
+            html.Div(
+                className='glass-card',
+                style={'padding': '20px', 'marginBottom': '20px'},
+                children=[
+                    html.Div(
+                        style={'display': 'flex', 'gap': '20px', 'marginBottom': '20px'},
+                        children=[
+                            html.Div(
+                                dcc.Graph(id='mold-failure-bar'),
+                                className='glass-card',
+                                style={'flex': '1'}
+                            ),
+                            html.Div(
+                                dcc.Graph(id='shap-pie-chart'),
+                                className='glass-card',
+                                style={'flex': '1'}
+                            )
+                        ]
+                    ),
+                    dcc.Dropdown(
+                        id='selected-variable',
+                        options=[{'label': SENSOR_KO_NAME_FOR_ANALTICS.get(var, var), 'value': var} for var in sensor_features],
+                        value=[sensor_features[0]],
+                        multi=True,
+                        style={'width': '300px', 'marginBottom': '20px'}
+                    ),
+                    html.Div(id="monitoring-graph-container", className='glass-card')
+                ]
+            )
+        ]),
 
         # 오류방지용 작성
         html.Div(id="result-prob-card", style={"display": "none"}),
@@ -300,14 +379,28 @@ def register_mold_callbacks(app):
         Input("production-monitoring-store", "data"),
         Input("mold-code-selector", "value"),
         Input("mold-stats-store", "data"),
+        Input("mold-time-range", "value"),
         prevent_initial_call=False
     )
-    def update_mold_time_graph(production_monitoring, selected_code, mold_stats):
+    def update_mold_time_graph(production_monitoring, selected_code, mold_stats,time_range):
         if selected_code is None or mold_stats is None:
             print("인수인계 문제 발생1")
             raise PreventUpdate
         if not production_monitoring or not production_monitoring.get('timestamps'):
             return go.Figure()
+        
+        time_limit_map = {
+            "1min": timedelta(minutes=1),
+            "30min": timedelta(minutes=30),
+            "1hour": timedelta(hours=1),
+            "2hour": timedelta(hours=2),
+            "4hour": timedelta(hours=4),
+            "24hour": timedelta(hours=24),
+        }
+
+        now = datetime.now()
+        time_limit = time_limit_map.get(time_range, timedelta(hours=1))
+        start_time = now - time_limit
 
         # production_monitoring → dict → DataFrame 변환
         df_filtered = pd.DataFrame({
@@ -319,20 +412,31 @@ def register_mold_callbacks(app):
         df_filtered['mold_code_str'] = df_filtered['mold_code'].astype(str)
 
         time_fig = go.Figure()
+        for code, stats in mold_stats.items():
+            timestamps = stats.get("timestamps", [])
+            if not timestamps:
+                continue
 
-        for code in mold_codes:
+            try:
+                dt_times = [datetime.strptime(t, "%Y-%m-%d %H:%M:%S") for t in timestamps]
+            except:
+                continue
+
+            filtered_times = [t for t in dt_times if t >= start_time]
+            if not filtered_times:
+                continue
+
             code_str = str(code)
-            df_code = df_filtered[df_filtered['mold_code_str'] == code_str]
             time_fig.add_trace(go.Scatter(
-                x=df_code['timestamp'],
-                y=[code_str] * len(df_code),
+                x=filtered_times,
+                y=[code_str] * len(filtered_times),
                 mode='markers',
                 marker=dict(size=10),
-                name=f'Mold {code_str}'
+                name=f"{code_str}금형"
             ))
 
         time_fig.update_layout(
-            title="몰드코드별 시간대별 생산 이력",
+            title="금형별 생산 이력",
             xaxis_title="시간",
             yaxis_title="Mold Code",
             yaxis=dict(categoryorder='category ascending'),
@@ -345,7 +449,7 @@ def register_mold_callbacks(app):
         failure_rates = []
         for code, stats in mold_stats.items():
             try:
-                code_int = int(code)  # 보장
+                code_int = int(code)
             except:
                 continue
             total = stats.get("total", 0)
@@ -357,29 +461,25 @@ def register_mold_callbacks(app):
         bar_fig = go.Figure()
         bar_fig.add_trace(go.Bar(x=codes, y=failure_rates, name="불량률"))
         bar_fig.update_layout(
-            title="몰드코드별 불량률",
-            xaxis_title="몰드코드",
+            title="금형별 불량률",
+            xaxis_title="금형종류",
             yaxis_title="불량률",
-            yaxis_range=[0, 1],
-            plot_bgcolor='rgba(0,0,0,0)'
+            yaxis_range=[0, 0.1],
+            plot_bgcolor='rgba(0,0,0,0)',
+            paper_bgcolor='rgba(0,0,0,0)'
         )
 
         # === 3. SHAP 피처 파이차트 ===
-        selected_stats = mold_stats.get(str(selected_code)) 
-        if not selected_stats:
-            pie_fig = go.Figure()
-            pie_fig.update_layout(title="SHAP 데이터 없음")
-            return time_fig, bar_fig, pie_fig
+        selected_stats = mold_stats.get(str(selected_code))
+        shap_dict = selected_stats.get("shap_summary", {}) if selected_stats else {}
 
-        shap_dict = selected_stats.get("shap_summary", {})
+        pie_fig = go.Figure()
         if shap_dict:
-            pie_fig = go.Figure(data=[
-                go.Pie(labels=list(shap_dict.keys()), values=list(shap_dict.values()), hole=0.3)
-            ])
-            pie_fig.update_layout(title=f"{selected_code}번 몰드 SHAP 주요 원인 분포")
+            labels_ko = [SENSOR_KO_NAME_FOR_ANALTICS.get(k, k) for k in shap_dict.keys()]
+            pie_fig.add_trace(go.Pie(labels=labels_ko, values=list(shap_dict.values()), hole=0.3))
+            pie_fig.update_layout(title=f"{selected_code}금형 불량 원인",plot_bgcolor='rgba(0,0,0,0)',paper_bgcolor='rgba(0,0,0,0)')
         else:
-            pie_fig = go.Figure()
-            pie_fig.update_layout(title="SHAP 데이터 없음")
+            pie_fig.update_layout(title="불량 판정 데이터 없음",plot_bgcolor='rgba(0,0,0,0)',paper_bgcolor='rgba(0,0,0,0)')
 
         return time_fig, bar_fig, pie_fig
 
@@ -433,15 +533,20 @@ def register_callbacks(app):
         row = df_all.iloc[[current_index]]
         pred, prob, shap_summary = predict_with_shap(row.iloc[0])
         mold_code = str(row.iloc[0]["mold_code"])
-
+        now_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         if mold_code not in mold_stat:
             print(f"문제발생: {mold_code}")
             mold_stat[mold_code] = {
                 'total': 0,
                 'fail': 0,
-                'shap_summary': {}
+                'shap_summary': {},
+                'timestamps': []
             }
         mold_stat[mold_code]['total'] += 1
+        mold_stat[mold_code]['timestamps'].append(now_time)
+        
+        def translate_features_to_ko(features):
+            return [SENSOR_KO_NAME_FOR_ANALTICS.get(f.strip(), f.strip()) for f in features]
 
         counter_data['total_count'] += 1
         if pred == 1:
@@ -453,13 +558,13 @@ def register_callbacks(app):
                 shap_dict[feature] = shap_dict.get(feature, 0) + 1
 
             update_failure_cause_stats(mold_code, shap_summary)  # 여기서 shap_summary는 실제로 top_features
-            top_features = shap_summary  # 이름만 더 명확하게 해주는 용도
-            log_msg = f"Index {current_index} - 불량 발생 - 주요 원인: {', '.join(top_features)}"
+            top_features_ko = translate_features_to_ko(shap_summary)  # 이름만 더 명확하게 해주는 용도
+            log_msg = f"{now_time} | 금형코드: {mold_code} | 주요 원인: {', '.join(top_features_ko)}"
 
             if log_msg not in fault_history:
                 fault_history.append(log_msg)
 
-        now_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        
         failure_rate = counter_data['fail_count'] / counter_data['total_count']
         counter_data['timestamps'].append(now_time)
         counter_data['failure_rates'].append(failure_rate)
@@ -512,13 +617,28 @@ def register_callbacks(app):
 
         row = df_all.iloc[[current_index]]
         pred, prob = predict_one_row(row.iloc[0])
-
+        mold_code = str(df_all.iloc[current_index]['mold_code'])
         # ===== 결과 카드 =====
-        result_card_children = [
-            html.Div(f"{'불량' if pred == 1 else '양품'} (Index: {current_index})", style={"fontWeight": "bold", "fontSize": "20px", "marginBottom": "10px"}),
-            html.P(f"예측 결과: {'불량품' if pred == 1 else '정상품'}"),
+        card_color = "#f8d7da" if pred == 1 else "#d4edda"  # 빨강/초록
+        result_card_children = html.Div([
+            html.Div(f"{'불량' if pred == 1 else '양품'} (금형종류: {mold_code})", style={"fontWeight": "bold", "fontSize": "20px"}),
             html.P(f"불량 확률: {prob:.4f}")
-        ]
+        ])
+
+        wrapper_style = {
+            "backgroundColor": card_color,
+            "padding": "20px",
+            "borderRadius": "10px",
+            "boxShadow": "0 4px 8px rgba(0, 0, 0, 0.1)",
+            "color": "#333333",
+            "display": "flex",
+            "flexDirection": "column",
+            "gap": "20px",
+            "flex": "1"
+        }
+
+        # 바깥 카드에 색상 반영
+        result_card = html.Div(result_card_children, style=wrapper_style)
 
         # ===== 고장 기록 =====
         fault_items = [
@@ -534,9 +654,11 @@ def register_callbacks(app):
         now = datetime.now()
         time_limit_map = {
             "1min": timedelta(minutes=1),
-            "15min": timedelta(minutes=15),
             "30min": timedelta(minutes=30),
-            "1hour": timedelta(hours=1)
+            "1hour": timedelta(hours=1),
+            "2hour": timedelta(hours=2),
+            "4hour": timedelta(hours=4),
+            "24hour": timedelta(hours=24)
         }
         limit = time_limit_map.get(time_range, timedelta(minutes=1))
         start_time = now - limit
@@ -567,11 +689,11 @@ def register_callbacks(app):
         tickvals = filtered_x if len(filtered_x) <= 5 else [filtered_x[i] for i in np.linspace(0, len(filtered_x) - 1, 5, dtype=int)]
 
         fig.update_layout(
-            title='선택 시간 범위 누적 불량률',
+            title='누적 불량률',
             plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)',
             margin=dict(l=50, r=30, t=50, b=40),
             font=dict(size=13),
-            xaxis_title='시간 (실시간)',
+            xaxis_title='시간',
             yaxis_title='누적 불량률',
             yaxis_range=[0, 0.1],
             xaxis=dict(tickmode='array', tickvals=tickvals, tickangle=-45),
@@ -585,7 +707,7 @@ def register_callbacks(app):
         if not monitoring_data:
             raise PreventUpdate
         sensor_row = monitoring_data[current_index]
-        mold_code = str(df_all.iloc[current_index]['mold_code'])
+        # mold_code = str(df_all.iloc[current_index]['mold_code'])
         valid_ranges = valid_ranges_by_mold.get(mold_code, {})
 
         sensor_cards = []
@@ -594,25 +716,27 @@ def register_callbacks(app):
             display_val = f"값: {value:.2f}" if pd.notna(value) else "값: N/A"
             bg_color = get_card_color(feature, value, valid_ranges)
             card_style = {"backgroundColor": bg_color or "rgba(255,255,255,0.3)", "padding": "1rem", "borderRadius": "10px", "textAlign": "center"}
-            sensor_cards.append(html.Div([html.H6(feature), html.Div(display_val)], style=card_style))
+            ko_label = SENSOR_KO_NAME_FOR_ANALTICS.get(feature, feature)
+            sensor_cards.append(html.Div([html.H6(ko_label), html.Div(display_val)], style=card_style))
 
-        return result_card_children, fault_display, fig, sensor_cards, fault_history
+        return result_card, fault_display, fig, sensor_cards, fault_history
 
 #############################
 #################################
 
 def register_monitoring_callbacks(app):
     @app.callback(
-        Output("monitoring-graph", "figure"),
+        Output("monitoring-graph-container", "children"),
         Input("realtime-monitoring-store", "data"),
         Input("selected-variable", "value"),
         Input("mold-code-selector", "value"),
+        Input("mold-time-range", "value"),  # ⬅️ 추가
         State("production-monitoring-store", "data"),
         prevent_initial_call=False
     )
-    def update_monitoring_graph(monitoring_data, selected_var, selected_code, production_monitoring):
+    def update_monitoring_graphs(monitoring_data, selected_vars, selected_code, time_range, production_monitoring):
         if not monitoring_data or len(monitoring_data) == 0:
-            return go.Figure()
+            return []
 
         df = pd.DataFrame(monitoring_data)
 
@@ -620,31 +744,44 @@ def register_monitoring_callbacks(app):
         mold_codes_all = production_monitoring['mold_codes']
 
         df['timestamp'] = pd.to_datetime(timestamps)
-        df['mold_code'] = mold_codes_all
-
-        df['mold_code'] = df['mold_code'].astype(str)
+        df['mold_code'] = [str(code) for code in mold_codes_all]
         selected_code = str(selected_code)
 
-        df_filtered = df[df['mold_code'] == selected_code]
-        
-        fig = go.Figure()
+        # ⏱ 시간 필터링
+        time_limit_map = {
+            "1min": timedelta(minutes=1),
+            "30min": timedelta(minutes=30),
+            "1hour": timedelta(hours=1),
+            "2hour": timedelta(hours=2),
+            "4hour": timedelta(hours=4),
+            "24hour": timedelta(hours=24)
+        }
+        now = datetime.now()
+        time_limit = time_limit_map.get(time_range, timedelta(hours=1))
+        start_time = now - time_limit
 
-        for var in selected_var:
+        df_filtered = df[(df['mold_code'] == selected_code) & (df['timestamp'] >= start_time)]
+
+        graphs = []
+        for var in selected_vars:
+            ko_name = SENSOR_KO_NAME_FOR_ANALTICS.get(var, var)  # 존재하면 한글 이름, 아니면 원래 이름
+            fig = go.Figure()
             fig.add_trace(go.Scatter(
                 x=df_filtered['timestamp'],
                 y=df_filtered[var],
                 mode='lines+markers',
-                name=f"{var}"
+                name=ko_name
             ))
+            fig.update_layout(
+                title=f"{ko_name} 실시간 변화",
+                xaxis_title="시간",
+                yaxis_title=ko_name,
+                plot_bgcolor='rgba(0,0,0,0)',
+                paper_bgcolor='rgba(0,0,0,0)'
+            )
+            graphs.append(dcc.Graph(figure=fig, style={"height": "300px"}))
 
-        fig.update_layout(
-            title=f"전체 몰드코드 - {selected_var} 실시간 변화",
-            xaxis_title="시간",
-            yaxis_title=", ".join(selected_var),
-            plot_bgcolor='rgba(0,0,0,0)',
-            paper_bgcolor='rgba(0,0,0,0)'
-        )
-        return fig
+        return graphs
 
 ################################
 ####################################

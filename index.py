@@ -17,8 +17,8 @@ pd.set_option('future.no_silent_downcasting', True)
 
 # 예시 사용자 정보
 USERS = {
-    "1": {"password": "1", "role": "admin"},
-    "2": {"password": "2", "role": "worker"}
+    "admin": {"password": "admin", "role": "admin"},
+    "worker": {"password": "worker", "role": "worker"}
 }
 
 app = dash.Dash(__name__, suppress_callback_exceptions=True, external_stylesheets=[dbc.themes.BOOTSTRAP])
@@ -116,7 +116,7 @@ def login_logout_callback(login_trigger_clicks, logout_clicks, username, passwor
         # 사용자 인증 로직
         if username in USERS and USERS[username]["password"] == password:
             role = USERS[username]["role"]
-            path = "/worker/analytics" if role == "worker" else "/admin/model" if role == "admin" else "/"
+            path = "/worker" if role == "worker" else "/admin/model" if role == "admin" else "/"
             return role, path, "" # 역할, 경로, 메시지 초기화
         else:
             return no_update, no_update, "아이디 또는 비밀번호가 잘못되었습니다."
@@ -176,18 +176,13 @@ dashboard_worker.register_mold_callbacks(app)
 # dashboard_worker.register_mold_time_callbacks(app)
 dashboard_admin.register_callbacks(app)
 
-# if __name__ == "__main__":
-#     app.run(debug=True, port=8050)
+if __name__ == "__main__":
+    app.run(debug=True, port=8050)
 
 import os
 
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 8050))  # Render에서 제공하는 포트 사용
-    app.run(host="0.0.0.0", port=port, debug=True)  # 외부 접속 가능한 호스트로 설정
-
-
-# import os
-
 # if __name__ == "__main__":
-#     port = int(os.environ.get("PORT", 8050))  # 환경변수에서 포트 읽기
-#     app.run_server(host="0.0.0.0", port=port, debug=True)
+#     port = int(os.environ.get("PORT", 8050))  # Render에서 제공하는 포트 사용
+#     app.run(host="0.0.0.0", port=port, debug=True)  # 외부 접속 가능한 호스트로 설정
+
+

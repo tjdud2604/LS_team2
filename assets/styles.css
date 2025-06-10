@@ -211,3 +211,29 @@ body {
     from { opacity: 1; }
     to { opacity: 0.6; }
 }
+
+.big-apply-button {
+    font-size: 20px;
+    padding: 12px 24px;
+    height: 60px;
+    width: 120px;
+    border: 2px solid black;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+/* 확인용 슬라이더 (green) */
+.green-slider .rc-slider-track {
+    background-color: green !important;
+}
+.green-slider .rc-slider-handle {
+    border-color: green !important;
+}
+
+/* 센서 조절 슬라이더 (deeppink) */
+.deeppink-slider .rc-slider-track {
+    background-color: deeppink !important;
+}
+.deeppink-slider .rc-slider-handle {
+    border-color: deeppink !important;
+}
