@@ -438,7 +438,7 @@ def register_mold_callbacks(app):
         time_fig.update_layout(
             title="금형별 생산 이력",
             xaxis_title="시간",
-            yaxis_title="Mold Code",
+            yaxis_title="금형",
             yaxis=dict(categoryorder='category ascending'),
             plot_bgcolor='rgba(0,0,0,0)',
             paper_bgcolor='rgba(0,0,0,0)'
@@ -769,7 +769,7 @@ def register_monitoring_callbacks(app):
             fig.add_trace(go.Scatter(
                 x=df_filtered['timestamp'],
                 y=df_filtered[var],
-                mode='lines+markers',
+                mode='markers',
                 name=ko_name
             ))
             fig.update_layout(
