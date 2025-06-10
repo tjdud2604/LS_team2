@@ -65,7 +65,7 @@ def predict_with_shap(row):
         'num__upper_mold_temp1', 'num__upper_mold_temp2', 'num__lower_mold_temp1', 'num__lower_mold_temp2',
         'num__cast_pressure', 'num__sleeve_temperature', 'num__low_section_speed', 'num__Coolant_temperature'
     ]
-    
+
     mold_code = int(row["mold_code"])
     pipeline = load_model_for_mold_code(mold_code)
     x_row_raw = row.to_frame().T
@@ -77,7 +77,15 @@ def predict_with_shap(row):
     x_processed = preprocessor.transform(x_fe)
     model = pipeline.named_steps['clf']
 
-    # SHAP 계산
+    # 먼저 예측
+    pred = model.predict(x_processed)[0]
+    prob = model.predict_proba(x_processed)[0, 1]
+
+    # 불량이 아닌 경우 SHAP 생략
+    if pred != 1:
+        return pred, prob, []
+
+    # 불량일 경우에만 SHAP 계산
     explainer = get_explainer_for_model(model)
     shap_values = explainer.shap_values(x_processed, check_additivity=False)
 
@@ -86,9 +94,6 @@ def predict_with_shap(row):
         shap_for_class = shap_values[1] if len(shap_values) > 1 else shap_values[0]
     else:
         shap_for_class = shap_values
-
-    pred = model.predict(x_processed)[0]
-    prob = model.predict_proba(x_processed)[0, 1]
 
     try:
         feature_names = preprocessor.get_feature_names_out()
@@ -105,9 +110,7 @@ def predict_with_shap(row):
     if abs_sum != 0:
         contrib_list = [(name, abs(val) / abs_sum) for name, val in zip(feature_names, shap_array)]
         filtered = [(name, percent) for name, percent in contrib_list if name in sensor_features_for_shap]
-
         if filtered:
-            # 상위 1개만
             top_features = [name for name, _ in sorted(filtered, key=lambda x: x[1], reverse=True)[:1]]
 
     return pred, prob, top_features
